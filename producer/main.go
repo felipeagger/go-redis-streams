@@ -26,16 +26,17 @@ func main() {
 func generateEvent(client *redis.Client) {
 	for i := 0; i < 10; i++ {
 
+		eventType := []event.Type{event.ViewType, event.LikeType}[rand.Intn(2)]
 		extra := []string{"test", "gopher", "streams"}[rand.Intn(3)]
 		userID := uint64(rand.Intn(1000))
 
 		strCMD := client.XAdd(&redis.XAddArgs{
 			Stream: streamName,
 			Values: map[string]interface{}{
-				"type": string(event.ViewType),
+				"type": string(eventType),
 				"data": &event.ViewEvent{
 					Base: &event.Base{
-						Type:     event.ViewType,
+						Type:     eventType,
 						DateTime: time.Now(),
 					},
 					UserID: userID,
@@ -48,7 +49,8 @@ func generateEvent(client *redis.Client) {
 		if err != nil {
 			fmt.Printf("produce event error:%v\n", err)
 		} else {
-			fmt.Printf("produce event success UserID:%v Extra:%v offset:%v\n", userID, extra, newID)
+			fmt.Printf("produce event success Type:%v UserID:%v Extra:%v offset:%v\n",
+				string(eventType), userID, extra, newID)
 		}
 
 	}

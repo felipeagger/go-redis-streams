@@ -22,7 +22,7 @@ func HandlerFactory() func(t event.Type) Handler {
 		case event.ViewType:
 			return NewViewHandler()
 		case event.LikeType:
-			return NewViewHandler()
+			return NewLikeHandler()
 		}
 		return NewLogHandler()
 	}

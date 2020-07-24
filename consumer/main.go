@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/felipeagger/go-redis-streams/consumer/handler"
 	"github.com/felipeagger/go-redis-streams/packages/event"
@@ -13,6 +14,11 @@ const (
 	streamName = "events"
 )
 
+var (
+	mutex sync.Mutex
+	start string = "-"
+)
+
 func main() {
 	client, err := utils.NewRedisClient()
 	if err != nil {
@@ -21,65 +27,59 @@ func main() {
 
 	fmt.Printf("Initializing consumer on Stream: %v ...\n", streamName)
 
-	// start fetch events
-	events := eventFetcher(client)
-
-	// start consume events
-	consumeEvents(events, handler.HandlerFactory())
+	go consumeEvents(client)
 
 	quit := make(chan bool)
 	<-quit
 }
 
-func consumeEvents(events chan event.Event, handlerFactory func(t event.Type) handler.Handler) {
+// start consume events
+func consumeEvents(client *redis.Client) {
+
 	for {
-		select {
-		case event := <-events:
-			h := handlerFactory(event.GetType())
-			err := h.Handle(event)
+		func() {
+
+			redisRange, err := client.XRange(streamName, start, "+").Result()
 			if err != nil {
-				fmt.Printf("handle event error eventType:%v err:%v\n", event.GetType(), err)
+				panic(err)
 			}
-		}
+
+			for _, stream := range redisRange {
+
+				go processStream(stream, client, handler.HandlerFactory())
+
+			}
+
+		}()
 	}
+
 }
 
-// start fetch new event starting from st.LatestEventID
-func eventFetcher(client *redis.Client) chan event.Event {
-	c := make(chan event.Event, 1000)
-	start := "-"
+func processStream(stream redis.XMessage, client *redis.Client, handlerFactory func(t event.Type) handler.Handler) {
 
-	go func() {
-		for {
-			func() {
+	typeEvent := stream.Values["type"].(string)
+	newEvent, _ := event.New(event.Type(typeEvent))
 
-				redisRange, err := client.XRange(streamName, start, "+").Result()
-				if err != nil {
-					panic(err)
-				}
+	err := newEvent.UnmarshalBinary([]byte(stream.Values["data"].(string)))
+	if err != nil {
+		fmt.Printf("error on unmarshal stream:%v\n", stream.ID)
+		return
+	}
 
-				for _, stream := range redisRange {
-					start = stream.ID
+	newEvent.SetID(stream.ID)
 
-					tp := stream.Values["type"].(string)
-					newEvent, _ := event.New(event.Type(tp))
+	h := handlerFactory(newEvent.GetType())
+	err = h.Handle(newEvent)
+	if err != nil {
+		fmt.Printf("error on process event:%v\n", newEvent)
+		fmt.Println(err)
+		return
+	}
 
-					err = newEvent.UnmarshalBinary([]byte(stream.Values["data"].(string)))
-					if err != nil {
-						fmt.Printf("fail to unmarshal event:%v\n", stream.ID)
-						return
-					}
+	//Delete stream from redis
+	client.XDel(streamName, stream.ID)
 
-					//Delete stream from redis
-					client.XDel(streamName, stream.ID)
-
-					newEvent.SetID(stream.ID)
-					c <- newEvent
-				}
-
-			}()
-		}
-	}()
-
-	return c
+	mutex.Lock()
+	start = stream.ID
+	mutex.Unlock()
 }

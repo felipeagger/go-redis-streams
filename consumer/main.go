@@ -19,7 +19,6 @@ import (
 
 var (
 	waitGrp       sync.WaitGroup
-	mutex         sync.Mutex
 	client        *redis.Client
 	start         string = ">"
 	streamName    string = os.Getenv("STREAM")
@@ -38,11 +37,6 @@ func init() {
 }
 
 func main() {
-	client, err := utils.NewRedisClient()
-	if err != nil {
-		panic(err)
-	}
-
 	fmt.Printf("Initializing Consumer:%v\nConsumerGroup: %v \nStream: %v\n",
 		consumerName, consumerGroup, streamName)
 

@@ -15,7 +15,7 @@ consume:
 	@echo "---- Running Consumer ----"
 	@export REDIS_HOST=localhost
 	@export STREAM=events
-	#@export GROUP=GroupOne
+	@export GROUP=GroupOne
 	@go run consumer/*.go
 
 run:

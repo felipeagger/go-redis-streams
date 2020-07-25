@@ -37,6 +37,7 @@ func generateEvent() {
 		eventType := []evt.Type{evt.LikeType, evt.CommentType}[rand.Intn(2)]
 
 		if eventType == evt.LikeType {
+
 			newID, err := produceMsg(map[string]interface{}{
 				"type": string(eventType),
 				"data": &evt.LikeEvent{
@@ -49,7 +50,9 @@ func generateEvent() {
 			})
 
 			checkError(err, newID, string(eventType), userID)
+
 		} else {
+
 			comment := []string{"Go e Top!", "Go e demais!", "Go e vida!"}[rand.Intn(3)]
 
 			newID, err := produceMsg(map[string]interface{}{

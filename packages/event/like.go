@@ -5,7 +5,6 @@ import "github.com/vmihailenco/msgpack/v4"
 type LikeEvent struct {
 	*Base
 	UserID uint64
-	Extra  string
 }
 
 func (o *LikeEvent) MarshalBinary() (data []byte, err error) {

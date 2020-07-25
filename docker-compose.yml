@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: redis-srv
+    ports:
+      - 6379:6379
+
+  redis-commander:
+    container_name: redis-commander-web
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+
+  consumer:
+    container_name: go-consumer
+    build: '.'
+    environment:
+      REDIS_HOST: redis
+      STREAM: events
+      GROUP: GroupOne
+    depends_on:
+      - redis
+    ports:
+      - '8088:8088'
+    restart: always

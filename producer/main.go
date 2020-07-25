@@ -24,11 +24,12 @@ func main() {
 }
 
 func generateEvent(client *redis.Client) {
+	var userID uint64 = 0
 	for i := 0; i < 10; i++ {
 
 		eventType := []event.Type{event.ViewType, event.LikeType}[rand.Intn(2)]
 		extra := []string{"test", "gopher", "streams"}[rand.Intn(3)]
-		userID := uint64(rand.Intn(1000))
+		userID++ //uint64(rand.Intn(1000))
 
 		strCMD := client.XAdd(&redis.XAddArgs{
 			Stream: streamName,

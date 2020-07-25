@@ -1,2 +1,2 @@
 # go-redis-streams
-Demo using messageria with Redis Streams in Golang
+Demo using messaging with Redis Streams in Golang

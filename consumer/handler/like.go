@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/felipeagger/go-redis-streams/packages/event"
@@ -19,6 +20,10 @@ func (h *likeHandler) Handle(e event.Event) error {
 
 	if !ok {
 		return fmt.Errorf("incorrect event type")
+	}
+
+	if like.UserID == 5 {
+		return errors.New("Falhou")
 	}
 
 	fmt.Printf("completed like %+v UserID: %v Extra:%v \n", like, like.UserID, like.Extra)

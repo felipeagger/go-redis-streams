@@ -2,7 +2,12 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/felipeagger/go-redis-streams/consumer/handler"
 	"github.com/felipeagger/go-redis-streams/packages/event"
@@ -11,12 +16,15 @@ import (
 )
 
 const (
-	streamName = "events"
+	streamName    = "events"
+	consumerGroup = "consumersOne"
+	consumerName  = "consumerOne"
 )
 
 var (
-	mutex sync.Mutex
-	start string = "-"
+	waitGrp sync.WaitGroup
+	mutex   sync.Mutex
+	start   string = ">" //"0" //"0-0" //"-"
 )
 
 func main() {
@@ -25,12 +33,30 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Initializing consumer on Stream: %v ...\n", streamName)
+	createConsumerGroup(client)
 
+	fmt.Printf("Initializing consumerGroup: %v on Stream: %v ...\n", consumerGroup, streamName)
 	go consumeEvents(client)
 
-	quit := make(chan bool)
-	<-quit
+	//Gracefully end
+	chanOS := make(chan os.Signal)
+	signal.Notify(chanOS, syscall.SIGINT, syscall.SIGTERM)
+	<-chanOS
+
+	waitGrp.Wait()
+	client.Close()
+}
+
+func createConsumerGroup(client *redis.Client) {
+
+	if _, err := client.XGroupCreateMkStream(streamName, consumerGroup, "0").Result(); err != nil {
+
+		if !strings.Contains(fmt.Sprint(err), "BUSYGROUP") {
+			fmt.Printf("Error on create Consumer Group: %v ...\n", consumerGroup)
+			panic(err)
+		}
+
+	}
 }
 
 // start consume events
@@ -39,13 +65,31 @@ func consumeEvents(client *redis.Client) {
 	for {
 		func() {
 
-			redisRange, err := client.XRange(streamName, start, "+").Result()
+			/*
+				redisRange, err := client.XRange(streamName, start, "+").Result()
+				if err != nil {
+					panic(err)
+				}
+			*/
+
+			streams, err := client.XReadGroup(&redis.XReadGroupArgs{
+				Streams:  []string{streamName, start},
+				Group:    consumerGroup,
+				Consumer: consumerName,
+				//NoAck:    true,
+				Count: 10,
+				Block: 0, // Wait for new messages without a timeout.
+			}).Result()
 			if err != nil {
-				panic(err)
+				log.Printf("err: %+v\n", err)
+				return
 			}
 
-			for _, stream := range redisRange {
+			fmt.Println("new round")
 
+			for _, stream := range streams[0].Messages {
+
+				waitGrp.Add(1)
 				go processStream(stream, client, handler.HandlerFactory())
 
 			}
@@ -56,6 +100,7 @@ func consumeEvents(client *redis.Client) {
 }
 
 func processStream(stream redis.XMessage, client *redis.Client, handlerFactory func(t event.Type) handler.Handler) {
+	defer waitGrp.Done()
 
 	typeEvent := stream.Values["type"].(string)
 	newEvent, _ := event.New(event.Type(typeEvent))
@@ -73,13 +118,25 @@ func processStream(stream redis.XMessage, client *redis.Client, handlerFactory f
 	if err != nil {
 		fmt.Printf("error on process event:%v\n", newEvent)
 		fmt.Println(err)
+
+		client.XClaimJustID(&redis.XClaimArgs{
+			Stream:   streamName,
+			Group:    consumerGroup,
+			Consumer: "consumerTwo",
+			Messages: []string{stream.ID},
+			//MinIdle:  5 * time.Second,
+		})
 		return
 	}
 
 	//Delete stream from redis
-	client.XDel(streamName, stream.ID)
+	//client.XDel(streamName, stream.ID)
+	client.XAck(streamName, consumerGroup, stream.ID)
 
-	mutex.Lock()
-	start = stream.ID
-	mutex.Unlock()
+	/*
+		mutex.Lock()
+		start = stream.ID
+		//fmt.Printf("new start: %v \n", start)
+		mutex.Unlock()
+	*/
 }

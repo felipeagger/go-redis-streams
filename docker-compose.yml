@@ -17,8 +17,8 @@ services:
     ports:
       - "8081:8081"
 
-  consumer:
-    container_name: go-consumer
+  consumer_one:
+    container_name: go-consumer-one
     build: '.'
     environment:
       REDIS_HOST: redis
@@ -26,6 +26,26 @@ services:
       GROUP: GroupOne
     depends_on:
       - redis
-    ports:
-      - '8088:8088'
+    restart: always
+
+  consumer_two:
+    container_name: go-consumer-two
+    build: '.'
+    environment:
+      REDIS_HOST: redis
+      STREAM: events
+      GROUP: GroupTwo
+    depends_on:
+      - redis
+    restart: always
+
+  consumer_three:
+    container_name: go-consumer-three
+    build: '.'
+    environment:
+      REDIS_HOST: redis
+      STREAM: events
+      GROUP: GroupTwo
+    depends_on:
+      - redis
     restart: always

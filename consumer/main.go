@@ -17,17 +17,14 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-const (
-	streamName    = "events"
-	consumerGroup = "consumersOne"
-)
-
 var (
-	waitGrp      sync.WaitGroup
-	mutex        sync.Mutex
-	client       *redis.Client
-	start        string = ">" //"0" //"0-0" //"-"
-	consumerName string = uuid.NewV4().String()
+	waitGrp       sync.WaitGroup
+	mutex         sync.Mutex
+	client        *redis.Client
+	start         string = ">"
+	streamName    string = os.Getenv("STREAM")
+	consumerGroup string = os.Getenv("GROUP")
+	consumerName  string = uuid.NewV4().String()
 )
 
 func init() {
@@ -187,5 +184,5 @@ func processStream(stream redis.XMessage, retry bool, handlerFactory func(t even
 	//client.XDel(streamName, stream.ID)
 	client.XAck(streamName, consumerGroup, stream.ID)
 
-	//time.Sleep(3 * time.Second)
+	//time.Sleep(2 * time.Second)
 }

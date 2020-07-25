@@ -11,6 +11,8 @@ O Redis tem estratégias para guardar os dados em memória e em disco, garantind
 
 # Redis Streams para Mensageria (ou Messaging)
 
+![Design of flow](/media/flow.png)
+
 **Pontos Positivos**
 
 - Suporta Topicos e Filas 

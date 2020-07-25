@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	evt "github.com/felipeagger/go-redis-streams/packages/event"
@@ -10,11 +11,10 @@ import (
 	"github.com/go-redis/redis/v7"
 )
 
-const (
-	streamName = "events"
+var (
+	streamName string = os.Getenv("STREAM")
+	client     *redis.Client
 )
-
-var client *redis.Client
 
 func init() {
 	var err error

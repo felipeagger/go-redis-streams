@@ -2,6 +2,7 @@
 Demo using messaging with Redis Streams in Golang
 
 **Utilizando mensageria na pratica com Redis streams e Golang**
+
 [![YouTube Video Explanation](http://img.youtube.com/vi/Kc-tcrP0c10/0.jpg)](http://www.youtube.com/watch?v=Kc-tcrP0c10 "Utilizando mensageria na pratica com Redis streams e Golang")
 
 # Redis
